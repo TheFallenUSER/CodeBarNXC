@@ -1,0 +1,96 @@
+#include "NXCDefs.h"
+
+int lista[4];
+int binario = 0;
+
+int invalid(int listaFuncion[]) {
+    int binario = 0;
+    for(int k = 0; k < 4; k++) {
+        if(listaFuncion[3 - k] == 1) {
+            int potencia = 1;
+            for(int p = 0; p < k; p++) {
+                potencia *= 2;
+            }
+            binario += potencia;
+        }
+    }
+    return binario;
+}
+
+
+task main() {
+    int sensorValue;
+    SetSensorColorFull(IN_3); // Configura el sensor de color en el puerto 3
+
+    long t0, tiempo, menorValor = 0;
+    int contador = 0;
+
+    // Fase de calibración (3 iteraciones)
+    for(int i = 0; i < 3; i++) {
+        // Avanzar hasta detectar color negro
+        while(Sensor(IN_3) != 1) {  // Asumiendo que 1 es negro
+            OnFwd(OUT_BC, 25);
+        }
+
+        t0 = CurrentTick();  // Inicia el tiempo
+
+        // Avanzar lentamente hasta detectar color blanco
+        while(Sensor(IN_3) != 6) {  // Asumiendo que 6 es blanco
+            OnFwd(OUT_BC, 12);
+        }
+
+        tiempo = CurrentTick() - t0;  // Calcular el tiempo transcurrido
+
+        TextOut(0, LCD_LINE1 + i, NumToStr(tiempo));  // Mostrar tiempo en LCD
+        TextOut(0, LCD_LINE1, NumToStr(contador));    // Mostrar contador en LCD
+
+        if(i == 0 || tiempo < menorValor) {
+            menorValor = tiempo;  // Actualizar menor tiempo
+        }
+
+        Off(OUT_BC);  // Detener motores brevemente antes de siguiente iteración
+    }
+
+    // Bucle principal de ejecución
+    while(true) {
+        // Avanzar hasta detectar color negro
+        while(Sensor(IN_3) != 1) {
+            OnFwd(OUT_BC, 50);
+        }
+
+        t0 = CurrentTick();  // Inicia el tiempo
+
+        // Avanzar lentamente hasta detectar color blanco
+        while(Sensor(IN_3) != 6) {
+            OnFwd(OUT_BC, 15);
+        }
+
+        tiempo = CurrentTick() - t0;  // Calcular el tiempo transcurrido
+
+        if(tiempo <= menorValor) {
+            TextOut(0, LCD_LINE4, "0");
+            lista[contador] = 0;
+        } else {
+            TextOut(0, LCD_LINE4, "1");
+            lista[contador] = 1;
+        }
+
+        contador++;
+
+        if(contador >= 4) {
+            Wait(2000);
+            RotateMotor(OUT_BC, 30, 90);  // Girar 90 grados a la derecha
+            break;
+        }
+    }
+
+    // Mostrar los resultados en la LCD
+    for(int j = 0; j < 4; j++) {
+        TextOut(j * 10, LCD_LINE5, NumToStr(lista[j]));
+    }
+
+    Wait(10000);
+    TextOut(10, LCD_LINE6, NumToStr(invalid(lista)));
+    Wait(10000);
+}
+
